@@ -145,32 +145,31 @@ fn tokenize_operator(x: &mut String) -> Option<TokenKind> {
     }
 }
 
-fn expr(tokens: &Vec<Token>, idx: usize) -> Node {
-    let n = tokens.len();
-    let mut node = mul(&tokens, idx);
+fn expr(tokens: &mut Vec<Token>) -> Node {
+    let mut node = mul(tokens);
 
-    for mut i in idx..n {
-        match &tokens[i] {
+    loop {
+        if tokens.len() == 0 {
+            break;
+        }
+        match &tokens[0] {
             Token::Operator { kind: TokenKind::TkAdd } => {
-                i += 1;
+                tokens.remove(0);
                 let node_i = *Node::new(
                     NodeKind::NdAdd,
                     Box::new(node),
-                    Box::new(mul(tokens, i)),
+                    Box::new(mul(tokens)),
                 );
                 node = node_i;
             }
             Token::Operator { kind: TokenKind::TkSub } => {
-                i += 1;
+                tokens.remove(0);
                 let node_i = *Node::new(
                     NodeKind::NdSub,
                     Box::new(node),
-                    Box::new(mul(tokens, i)),
+                    Box::new(mul(tokens)),
                 );
                 node = node_i;
-            }
-            Token::Number { val: _ } => {
-                continue;
             }
             _ => break,
         }
@@ -178,32 +177,31 @@ fn expr(tokens: &Vec<Token>, idx: usize) -> Node {
     node
 }
 
-fn mul(tokens: &Vec<Token>, idx: usize) -> Node {
-    let n = tokens.len();
-    let mut node = primary(&tokens, idx).unwrap();
+fn mul(tokens: &mut Vec<Token>) -> Node {
+    let mut node = primary(tokens).unwrap();
 
-    for mut i in idx..n {
-        match &tokens[i] {
+    loop {
+        if tokens.len() == 0 {
+            break;
+        }
+        match &tokens[0] {
             Token::Operator { kind: TokenKind::TkMul } => {
-                i += 1;
+                tokens.remove(0);
                 let node_i = *Node::new(
                     NodeKind::NdMul,
                     Box::new(node),
-                    Box::new(primary(tokens, i).unwrap()),
+                    Box::new(primary(tokens).unwrap()),
                 );
                 node = node_i;
             }
             Token::Operator { kind: TokenKind::TkDiv } => {
-                i += 1;
+                tokens.remove(0);
                 let node_i = *Node::new(
                     NodeKind::NdDiv,
                     Box::new(node),
-                    Box::new(primary(tokens, i).unwrap()),
+                    Box::new(primary(tokens).unwrap()),
                 );
                 node = node_i;
-            }
-            Token::Number { val: _ } => {
-                continue;
             }
             _ => break,
         }
@@ -211,14 +209,19 @@ fn mul(tokens: &Vec<Token>, idx: usize) -> Node {
     node
 }
 
-fn primary(tokens: &Vec<Token>, idx: usize) -> Option<Node> {
-    match &tokens[idx] {
+fn primary(tokens: &mut Vec<Token>) -> Option<Node> {
+    match &tokens[0] {
         Token::Operator { kind: TokenKind::TkPrSt } => {
-            let node = expr(&tokens, idx);
+            tokens.remove(0);
+            let node = expr(tokens);
+            if let Token::Operator { kind: TokenKind::TkPrEd } = &tokens[0] {
+                tokens.remove(0);
+            }
             Some(node)
         }
         _ => {
-            if let Token::Number { val } = tokens[idx] {
+            if let Token::Number { val } = tokens[0] {
+                tokens.remove(0);
                 Some(*Node::new_node_num(val))
             } else {
                 None
@@ -260,11 +263,11 @@ fn main() {
     println!(".intel_syntax noprefix");
     println!(".global main");
     println!("main:");
-//    let s = args[1].clone();
-    let s = "30+12-14 -2 + 2".to_string();
-    let v = tokenize(s);
+    let s = args[1].clone();
+//    let s = "30*(12-11) -2 + 2".to_string();
+    let mut v = tokenize(s);
 
-    let nodes = expr(&v, 0);
+    let nodes = expr(&mut v);
     gen(nodes);
 
     println!("  pop rax");
