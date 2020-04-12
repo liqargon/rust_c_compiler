@@ -7,6 +7,12 @@ enum TokenKind {
     TkDiv,
     TkPrSt,
     TkPrEd,
+    TkEq,
+    TkNEq,
+    TkLt,
+    TkGt,
+    TkLe,
+    TkGe,
 }
 
 enum Token {
@@ -34,6 +40,12 @@ enum NodeKind {
     NdSub,
     NdMul,
     NdDiv,
+    NdEq,
+    NdNEq,
+    NdLt,
+    NdGt,
+    NdLe,
+    NdGe,
 }
 
 impl Node {
@@ -109,6 +121,25 @@ fn tokenize_number(x: &mut String) -> Option<i32> {
 }
 
 fn tokenize_operator(x: &mut String) -> Option<TokenKind> {
+    if x.len() >= 2{
+        if x.starts_with("==") {
+            x.drain(0..2);
+            return Some(TokenKind::TkEq);
+        }
+        if x.starts_with("!=") {
+            x.drain(0..2);
+            return Some(TokenKind::TkNEq);
+        }
+        if x.starts_with("<=") {
+            x.drain(0..2);
+            return Some(TokenKind::TkLe);
+        }
+        if x.starts_with(">=") {
+            x.drain(0..2);
+            return Some(TokenKind::TkGe);
+        }
+    }
+
     match x.chars().next() {
         Some(c) => {
             match c {
@@ -136,6 +167,14 @@ fn tokenize_operator(x: &mut String) -> Option<TokenKind> {
                     x.remove(0);
                     Some(TokenKind::TkPrEd)
                 }
+                '<' => {
+                    x.remove(0);
+                    Some(TokenKind::TkLt)
+                }
+                '>' => {
+                    x.remove(0);
+                    Some(TokenKind::TkGt)
+                }
                 _ => None,
             }
         }
@@ -146,6 +185,95 @@ fn tokenize_operator(x: &mut String) -> Option<TokenKind> {
 }
 
 fn expr(tokens: &mut Vec<Token>) -> Node {
+    let node = equality(tokens);
+
+    node
+}
+
+fn equality(tokens: &mut Vec<Token>) -> Node {
+    let mut node = relational(tokens);
+
+    loop {
+        if tokens.len() == 0 {
+            break;
+        }
+        match &tokens[0] {
+            Token::Operator { kind: TokenKind::TkEq } => {
+                tokens.remove(0);
+                let node_i = *Node::new(
+                    NodeKind::NdEq,
+                    Box::new(node),
+                    Box::new(relational(tokens)),
+                );
+                node = node_i;
+            }
+            Token::Operator { kind: TokenKind::TkNEq } => {
+                tokens.remove(0);
+                let node_i = *Node::new(
+                    NodeKind::NdNEq,
+                    Box::new(node),
+                    Box::new(relational(tokens)),
+                );
+                node = node_i;
+            }
+            _ => break,
+        }
+    }
+    node
+}
+
+
+fn relational(tokens: &mut Vec<Token>) -> Node {
+    let mut node = add(tokens);
+
+    loop {
+        if tokens.len() == 0 {
+            break;
+        }
+        match &tokens[0] {
+            Token::Operator { kind: TokenKind::TkLt } => {
+                tokens.remove(0);
+                let node_i = *Node::new(
+                    NodeKind::NdLt,
+                    Box::new(node),
+                    Box::new(add(tokens)),
+                );
+                node = node_i;
+            }
+            Token::Operator { kind: TokenKind::TkLe } => {
+                tokens.remove(0);
+                let node_i = *Node::new(
+                    NodeKind::NdLe,
+                    Box::new(node),
+                    Box::new(add(tokens)),
+                );
+                node = node_i;
+            }
+            Token::Operator { kind: TokenKind::TkGt } => {
+                tokens.remove(0);
+                let node_i = *Node::new(
+                    NodeKind::NdGt,
+                    Box::new(add(tokens)),
+                    Box::new(node),
+                );
+                node = node_i;
+            }
+            Token::Operator { kind: TokenKind::TkGe } => {
+                tokens.remove(0);
+                let node_i = *Node::new(
+                    NodeKind::NdGe,
+                    Box::new(add(tokens)),
+                    Box::new(node),
+                );
+                node = node_i;
+            }
+            _ => break,
+        }
+    }
+    node
+}
+
+fn add(tokens: &mut Vec<Token>) -> Node {
     let mut node = mul(tokens);
 
     loop {
@@ -209,13 +337,13 @@ fn mul(tokens: &mut Vec<Token>) -> Node {
     node
 }
 
-fn unary(tokens: &mut Vec<Token>) -> Option<Node>{
+fn unary(tokens: &mut Vec<Token>) -> Option<Node> {
     match &tokens[0] {
-        Token::Operator {kind: TokenKind::TkAdd} => {
+        Token::Operator { kind: TokenKind::TkAdd } => {
             tokens.remove(0);
             primary(tokens)
         }
-        Token::Operator {kind: TokenKind::TkSub} => {
+        Token::Operator { kind: TokenKind::TkSub } => {
             tokens.remove(0);
             Some(*Node::new(NodeKind::NdSub, Node::new_node_num(0), Box::new(primary(tokens).unwrap())))
         }
@@ -267,6 +395,26 @@ fn gen(node: Node) {
                 println!("  cqo");
                 println!("  idiv rdi");
             }
+            NodeKind::NdEq => {
+                println!("  cmp rax, rdi");
+                println!("  sete al");
+                println!("  movzb rax, al");
+            }
+            NodeKind::NdNEq => {
+                println!("  cmp rax, rdi");
+                println!("  setne al");
+                println!("  movzb rax, al");
+            }
+            NodeKind::NdLe | NodeKind::NdGe => {
+                println!("  cmp rax, rdi");
+                println!("  setle al");
+                println!("  movzb rax, al");
+            }
+            NodeKind::NdLt | NodeKind::NdGt => {
+                println!("  cmp rax, rdi");
+                println!("  satl al");
+                println!("  movzb rax, al");
+            }
         }
         println!("  push rax");
     }
@@ -277,8 +425,8 @@ fn main() {
     println!(".intel_syntax noprefix");
     println!(".global main");
     println!("main:");
-    let s = args[1].clone();
-//    let s = "-30*(12-11) -2 + 2".to_string();
+//    let s = args[1].clone();
+    let s = "1>=0".to_string();
     let mut v = tokenize(s);
 
     let nodes = expr(&mut v);
