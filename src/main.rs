@@ -178,7 +178,7 @@ fn expr(tokens: &mut Vec<Token>) -> Node {
 }
 
 fn mul(tokens: &mut Vec<Token>) -> Node {
-    let mut node = primary(tokens).unwrap();
+    let mut node = unary(tokens).unwrap();
 
     loop {
         if tokens.len() == 0 {
@@ -190,7 +190,7 @@ fn mul(tokens: &mut Vec<Token>) -> Node {
                 let node_i = *Node::new(
                     NodeKind::NdMul,
                     Box::new(node),
-                    Box::new(primary(tokens).unwrap()),
+                    Box::new(unary(tokens).unwrap()),
                 );
                 node = node_i;
             }
@@ -199,7 +199,7 @@ fn mul(tokens: &mut Vec<Token>) -> Node {
                 let node_i = *Node::new(
                     NodeKind::NdDiv,
                     Box::new(node),
-                    Box::new(primary(tokens).unwrap()),
+                    Box::new(unary(tokens).unwrap()),
                 );
                 node = node_i;
             }
@@ -207,6 +207,20 @@ fn mul(tokens: &mut Vec<Token>) -> Node {
         }
     }
     node
+}
+
+fn unary(tokens: &mut Vec<Token>) -> Option<Node>{
+    match &tokens[0] {
+        Token::Operator {kind: TokenKind::TkAdd} => {
+            tokens.remove(0);
+            primary(tokens)
+        }
+        Token::Operator {kind: TokenKind::TkSub} => {
+            tokens.remove(0);
+            Some(*Node::new(NodeKind::NdSub, Node::new_node_num(0), Box::new(primary(tokens).unwrap())))
+        }
+        _ => primary(tokens),
+    }
 }
 
 fn primary(tokens: &mut Vec<Token>) -> Option<Node> {
@@ -264,7 +278,7 @@ fn main() {
     println!(".global main");
     println!("main:");
     let s = args[1].clone();
-//    let s = "30*(12-11) -2 + 2".to_string();
+//    let s = "-30*(12-11) -2 + 2".to_string();
     let mut v = tokenize(s);
 
     let nodes = expr(&mut v);
