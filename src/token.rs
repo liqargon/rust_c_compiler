@@ -11,6 +11,8 @@ pub enum TokenKind {
     TkGt,
     TkLe,
     TkGe,
+    TkAssign,
+    TkExprEnd,
 }
 
 pub enum Token {
@@ -20,6 +22,9 @@ pub enum Token {
     Number {
         val: i32,
     },
+    Ident{
+        offset: i32,
+    }
 }
 
 
@@ -37,6 +42,10 @@ pub fn tokenize(input: String) -> Vec<Token> {
         }
         if let Some(op) = tokenize_operator(&mut input) {
             tokens.push(Token::Operator { kind: op });
+            continue;
+        }
+        if let Some(var) = tokenize_variant(&mut input) {
+            tokens.push(Token::Ident{offset: (var as i32 - 'a' as i32 + 1) * 8});
             continue;
         }
     }
@@ -73,6 +82,16 @@ fn tokenize_number(x: &mut String) -> Option<i32> {
         None
     } else {
         Some(digits.parse::<i32>().unwrap())
+    }
+}
+
+fn tokenize_variant(x: &mut String) -> Option<char> {
+    match x.chars().next() {
+        Some(c) if 'a' <= c && c <= 'z' => {
+            x.remove(0);
+            Some(c)
+        },
+        _ => None,
     }
 }
 
@@ -130,6 +149,14 @@ fn tokenize_operator(x: &mut String) -> Option<TokenKind> {
                 '>' => {
                     x.remove(0);
                     Some(TokenKind::TkGt)
+                }
+                '=' => {
+                    x.remove(0);
+                    Some(TokenKind::TkAssign)
+                }
+                ';' => {
+                    x.remove(0);
+                    Some(TokenKind::TkExprEnd)
                 }
                 _ => None,
             }

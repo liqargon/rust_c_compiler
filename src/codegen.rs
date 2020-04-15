@@ -2,7 +2,24 @@ use crate::parse::*;
 
 pub fn gen(node: Node) {
     if let Node::Number { val } = node {
-        println!("  push {}", val)
+        println!("  push {}", val);
+        return;
+    }
+    if let Node::LVar {offset} = node {
+        gen_lval(node);
+        println!("  pop rax");
+        println!("  mov rax, [rax]");
+        println!("  push rax");
+        return;
+    }
+    if let Node::Operator {kind : NodeKind::NdAssign, lhs,rhs} = node {
+        gen_lval(*lhs);
+        gen(*rhs);
+        println!("  pop rdi");
+        println!("  pop rax");
+        println!("  mov [rax], rdi");
+        println!("  push rdi");
+        return;
     }
     if let Node::Operator { kind, lhs, rhs } = node {
         gen(*lhs);
@@ -43,7 +60,21 @@ pub fn gen(node: Node) {
                 println!("  satl al");
                 println!("  movzb rax, al");
             }
+            _ => (),
         }
         println!("  push rax");
     }
+}
+
+fn gen_lval(node: Node) {
+    if let Node::LVar {offset } = node {
+        println!("  mov rax, rbp");
+        println!("  sub rax, {}", offset);
+        println!("  push rax");
+
+    }else{
+        return;
+
+    }
+
 }

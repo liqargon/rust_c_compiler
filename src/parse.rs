@@ -9,6 +9,9 @@ pub enum Node {
     Number {
         val: i32,
     },
+    LVar {
+        offset: i32,
+    },
 }
 
 pub enum NodeKind {
@@ -22,6 +25,8 @@ pub enum NodeKind {
     NdGt,
     NdLe,
     NdGe,
+    NdAssign,
+    NdExprEnd,
 }
 
 impl Node {
@@ -40,12 +45,50 @@ impl Node {
         let node = Box::new(node);
         node
     }
+    fn new_node_lvar(val: i32) -> Box<Node> {
+        let node = Node::LVar { offset: val };
+        let node = Box::new(node);
+        node
+    }
 }
 
-pub fn expr(tokens: &mut Vec<Token>) -> Node {
-    let node = equality(tokens);
+pub fn program(tokens: &mut Vec<Token>) -> Vec<Node> {
+    let mut i = 0;
+    let mut code: Vec<Node> = Vec::new();
+    loop {
+        if tokens.len() == 0 {
+            break;
+        }
+        code.push(stmt(tokens));
+    }
+    code
+}
+
+fn stmt(tokens: &mut Vec<Token>) -> Node {
+    let mut node = expr(tokens);
+    if let Token::Operator { kind: TokenKind::TkExprEnd } = &tokens[0] {
+        tokens.remove(0);
+    }
 
     node
+}
+
+
+fn expr(tokens: &mut Vec<Token>) -> Node {
+    let node = assign(tokens);
+
+    node
+}
+
+fn assign(tokens: &mut Vec<Token>) -> Node {
+    let mut node = equality(tokens);
+    match &tokens[0] {
+        Token::Operator { kind: TokenKind::TkAssign } => {
+            tokens.remove(0);
+            *Node::new(NodeKind::NdAssign, Box::new(node), Box::new(assign(tokens)))
+        }
+        _ => node,
+    }
 }
 
 fn equality(tokens: &mut Vec<Token>) -> Node {
@@ -220,7 +263,10 @@ fn primary(tokens: &mut Vec<Token>) -> Option<Node> {
             Some(node)
         }
         _ => {
-            if let Token::Number { val } = tokens[0] {
+            if let Token::Ident { offset } = tokens[0] {
+                tokens.remove(0);
+                Some(*Node::new_node_lvar(offset))
+            }else if let Token::Number { val } = tokens[0] {
                 tokens.remove(0);
                 Some(*Node::new_node_num(val))
             } else {
