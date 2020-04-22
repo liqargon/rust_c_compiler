@@ -5,14 +5,14 @@ pub fn gen(node: Node) {
         println!("  push {}", val);
         return;
     }
-    if let Node::LVar {offset} = node {
+    if let Node::LVar { offset: _ } = node {
         gen_lval(node);
         println!("  pop rax");
         println!("  mov rax, [rax]");
         println!("  push rax");
         return;
     }
-    if let Node::Operator {kind : NodeKind::NdAssign, lhs,rhs} = node {
+    if let Node::Operator { kind: NodeKind::NdAssign, lhs, rhs } = node {
         gen_lval(*lhs);
         gen(*rhs);
         println!("  pop rdi");
@@ -67,14 +67,11 @@ pub fn gen(node: Node) {
 }
 
 fn gen_lval(node: Node) {
-    if let Node::LVar {offset } = node {
+    if let Node::LVar { offset } = node {
         println!("  mov rax, rbp");
         println!("  sub rax, {}", offset);
         println!("  push rax");
-
-    }else{
+    } else {
         return;
-
     }
-
 }

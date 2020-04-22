@@ -22,9 +22,9 @@ pub enum Token {
     Number {
         val: i32,
     },
-    Ident{
-        offset: i32,
-    }
+    Ident {
+        name: String
+    },
 }
 
 
@@ -44,8 +44,8 @@ pub fn tokenize(input: String) -> Vec<Token> {
             tokens.push(Token::Operator { kind: op });
             continue;
         }
-        if let Some(var) = tokenize_variant(&mut input) {
-            tokens.push(Token::Ident{offset: (var as i32 - 'a' as i32 + 1) * 8});
+        if let Some(name) = tokenize_variant(&mut input) {
+            tokens.push(Token::Ident { name });
             continue;
         }
     }
@@ -85,13 +85,23 @@ fn tokenize_number(x: &mut String) -> Option<i32> {
     }
 }
 
-fn tokenize_variant(x: &mut String) -> Option<char> {
-    match x.chars().next() {
-        Some(c) if 'a' <= c && c <= 'z' => {
-            x.remove(0);
-            Some(c)
-        },
-        _ => None,
+fn tokenize_variant(x: &mut String) -> Option<String> {
+    let mut s: String = "".to_string();
+    loop {
+        match x.chars().next() {
+            Some(c) if 'a' <= c && c <= 'z' => {
+                x.remove(0);
+                s.push(c);
+            }
+            _ => {
+                break;
+            }
+        }
+    }
+    if s.len() != 0 {
+        Some(s)
+    } else {
+        None
     }
 }
 
