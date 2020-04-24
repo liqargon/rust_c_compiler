@@ -1,4 +1,4 @@
-pub enum TokenKind {
+pub enum OperatorKind {
     TkAdd,
     TkSub,
     TkMul,
@@ -15,9 +15,13 @@ pub enum TokenKind {
     TkExprEnd,
 }
 
+pub enum KeywordKind {
+    TkReturn,
+}
+
 pub enum Token {
     Operator {
-        kind: TokenKind,
+        kind: OperatorKind,
     },
     Number {
         val: i32,
@@ -25,8 +29,8 @@ pub enum Token {
     Ident {
         name: String
     },
+    Return,
 }
-
 
 
 pub fn tokenize(input: String) -> Vec<Token> {
@@ -37,6 +41,12 @@ pub fn tokenize(input: String) -> Vec<Token> {
             break;
         }
         tokenize_whitespace(&mut input);
+        if let Some(kw) = tokenize_keyword(&mut input) {
+            match kw {
+                KeywordKind::TkReturn => tokens.push(Token::Return),
+            }
+            continue;
+        }
         if let Some(i) = tokenize_number(&mut input) {
             tokens.push(Token::Number { val: i });
             continue;
@@ -63,6 +73,15 @@ fn tokenize_whitespace(x: &mut String) {
                 break;
             }
         }
+    }
+}
+
+fn tokenize_keyword(x: &mut String) -> Option<KeywordKind> {
+    if x.starts_with("return ") {
+        x.drain(0..7);
+        Some(KeywordKind::TkReturn)
+    } else {
+        None
     }
 }
 
@@ -106,23 +125,23 @@ fn tokenize_variant(x: &mut String) -> Option<String> {
     }
 }
 
-fn tokenize_operator(x: &mut String) -> Option<TokenKind> {
+fn tokenize_operator(x: &mut String) -> Option<OperatorKind> {
     if x.len() >= 2 {
         if x.starts_with("==") {
             x.drain(0..2);
-            return Some(TokenKind::TkEq);
+            return Some(OperatorKind::TkEq);
         }
         if x.starts_with("!=") {
             x.drain(0..2);
-            return Some(TokenKind::TkNEq);
+            return Some(OperatorKind::TkNEq);
         }
         if x.starts_with("<=") {
             x.drain(0..2);
-            return Some(TokenKind::TkLe);
+            return Some(OperatorKind::TkLe);
         }
         if x.starts_with(">=") {
             x.drain(0..2);
-            return Some(TokenKind::TkGe);
+            return Some(OperatorKind::TkGe);
         }
     }
 
@@ -131,43 +150,43 @@ fn tokenize_operator(x: &mut String) -> Option<TokenKind> {
             match c {
                 '+' => {
                     x.remove(0);
-                    Some(TokenKind::TkAdd)
+                    Some(OperatorKind::TkAdd)
                 }
                 '-' => {
                     x.remove(0);
-                    Some(TokenKind::TkSub)
+                    Some(OperatorKind::TkSub)
                 }
                 '*' => {
                     x.remove(0);
-                    Some(TokenKind::TkMul)
+                    Some(OperatorKind::TkMul)
                 }
                 '/' => {
                     x.remove(0);
-                    Some(TokenKind::TkDiv)
+                    Some(OperatorKind::TkDiv)
                 }
                 '(' => {
                     x.remove(0);
-                    Some(TokenKind::TkPrSt)
+                    Some(OperatorKind::TkPrSt)
                 }
                 ')' => {
                     x.remove(0);
-                    Some(TokenKind::TkPrEd)
+                    Some(OperatorKind::TkPrEd)
                 }
                 '<' => {
                     x.remove(0);
-                    Some(TokenKind::TkLt)
+                    Some(OperatorKind::TkLt)
                 }
                 '>' => {
                     x.remove(0);
-                    Some(TokenKind::TkGt)
+                    Some(OperatorKind::TkGt)
                 }
                 '=' => {
                     x.remove(0);
-                    Some(TokenKind::TkAssign)
+                    Some(OperatorKind::TkAssign)
                 }
                 ';' => {
                     x.remove(0);
-                    Some(TokenKind::TkExprEnd)
+                    Some(OperatorKind::TkExprEnd)
                 }
                 _ => None,
             }

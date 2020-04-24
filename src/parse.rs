@@ -12,6 +12,7 @@ pub enum Node {
     LVar {
         offset: i32,
     },
+    Return(Box<Node>),
 }
 
 pub enum NodeKind {
@@ -87,7 +88,24 @@ impl Node {
         let node = Box::new(node);
         node
     }
+
+    fn new_keyword(rhs: Box<Node>) -> Box<Node> {
+        let node = Node::Return(rhs);
+        let node = Box::new(node);
+        node
+    }
 }
+
+// program    = stmt*
+// stmt       = expr ";" | "return" expr ";"
+// expr       = assign
+// assign     = equality ("=" assign)?
+// equality   = relational ("==" relational | "!=" relational)*
+// relational = add ("<" add | "<=" add | ">" add | ">=" add)*
+// add        = mul ("+" mul | "-" mul)*
+// mul        = unary ("*" unary | "/" unary)*
+// unary      = ("+" | "-")? primary
+// primary    = num | ident | "(" expr ")"
 
 pub fn program(tokens: &mut Vec<Token>) -> Vec<Node> {
     let mut lvars: Vec<LVar> = Vec::new();
@@ -102,12 +120,20 @@ pub fn program(tokens: &mut Vec<Token>) -> Vec<Node> {
 }
 
 fn stmt(tokens: &mut Vec<Token>, lvars: &mut Vec<LVar>) -> Node {
-    let node = expr(tokens, lvars);
-    if let Token::Operator { kind: TokenKind::TkExprEnd } = &tokens[0] {
+    if let Token::Return = &tokens[0] {
         tokens.remove(0);
+        let node = *Node::new_keyword(Box::new(expr(tokens, lvars)));
+        if let Token::Operator { kind: OperatorKind::TkExprEnd } = &tokens[0] {
+            tokens.remove(0);
+        }
+        node
+    } else {
+        let node = expr(tokens, lvars);
+        if let Token::Operator { kind: OperatorKind::TkExprEnd } = &tokens[0] {
+            tokens.remove(0);
+        }
+        node
     }
-
-    node
 }
 
 
@@ -120,7 +146,7 @@ fn expr(tokens: &mut Vec<Token>, lvars: &mut Vec<LVar>) -> Node {
 fn assign(tokens: &mut Vec<Token>, lvars: &mut Vec<LVar>) -> Node {
     let node = equality(tokens, lvars);
     match &tokens[0] {
-        Token::Operator { kind: TokenKind::TkAssign } => {
+        Token::Operator { kind: OperatorKind::TkAssign } => {
             tokens.remove(0);
             *Node::new(NodeKind::NdAssign, Box::new(node), Box::new(assign(tokens, lvars)))
         }
@@ -136,7 +162,7 @@ fn equality(tokens: &mut Vec<Token>, lvars: &mut Vec<LVar>) -> Node {
             break;
         }
         match &tokens[0] {
-            Token::Operator { kind: TokenKind::TkEq } => {
+            Token::Operator { kind: OperatorKind::TkEq } => {
                 tokens.remove(0);
                 let node_i = *Node::new(
                     NodeKind::NdEq,
@@ -145,7 +171,7 @@ fn equality(tokens: &mut Vec<Token>, lvars: &mut Vec<LVar>) -> Node {
                 );
                 node = node_i;
             }
-            Token::Operator { kind: TokenKind::TkNEq } => {
+            Token::Operator { kind: OperatorKind::TkNEq } => {
                 tokens.remove(0);
                 let node_i = *Node::new(
                     NodeKind::NdNEq,
@@ -169,7 +195,7 @@ fn relational(tokens: &mut Vec<Token>, lvars: &mut Vec<LVar>) -> Node {
             break;
         }
         match &tokens[0] {
-            Token::Operator { kind: TokenKind::TkLt } => {
+            Token::Operator { kind: OperatorKind::TkLt } => {
                 tokens.remove(0);
                 let node_i = *Node::new(
                     NodeKind::NdLt,
@@ -178,7 +204,7 @@ fn relational(tokens: &mut Vec<Token>, lvars: &mut Vec<LVar>) -> Node {
                 );
                 node = node_i;
             }
-            Token::Operator { kind: TokenKind::TkLe } => {
+            Token::Operator { kind: OperatorKind::TkLe } => {
                 tokens.remove(0);
                 let node_i = *Node::new(
                     NodeKind::NdLe,
@@ -187,7 +213,7 @@ fn relational(tokens: &mut Vec<Token>, lvars: &mut Vec<LVar>) -> Node {
                 );
                 node = node_i;
             }
-            Token::Operator { kind: TokenKind::TkGt } => {
+            Token::Operator { kind: OperatorKind::TkGt } => {
                 tokens.remove(0);
                 let node_i = *Node::new(
                     NodeKind::NdGt,
@@ -196,7 +222,7 @@ fn relational(tokens: &mut Vec<Token>, lvars: &mut Vec<LVar>) -> Node {
                 );
                 node = node_i;
             }
-            Token::Operator { kind: TokenKind::TkGe } => {
+            Token::Operator { kind: OperatorKind::TkGe } => {
                 tokens.remove(0);
                 let node_i = *Node::new(
                     NodeKind::NdGe,
@@ -219,7 +245,7 @@ fn add(tokens: &mut Vec<Token>, lvars: &mut Vec<LVar>) -> Node {
             break;
         }
         match &tokens[0] {
-            Token::Operator { kind: TokenKind::TkAdd } => {
+            Token::Operator { kind: OperatorKind::TkAdd } => {
                 tokens.remove(0);
                 let node_i = *Node::new(
                     NodeKind::NdAdd,
@@ -228,7 +254,7 @@ fn add(tokens: &mut Vec<Token>, lvars: &mut Vec<LVar>) -> Node {
                 );
                 node = node_i;
             }
-            Token::Operator { kind: TokenKind::TkSub } => {
+            Token::Operator { kind: OperatorKind::TkSub } => {
                 tokens.remove(0);
                 let node_i = *Node::new(
                     NodeKind::NdSub,
@@ -251,7 +277,7 @@ fn mul(tokens: &mut Vec<Token>, lvars: &mut Vec<LVar>) -> Node {
             break;
         }
         match &tokens[0] {
-            Token::Operator { kind: TokenKind::TkMul } => {
+            Token::Operator { kind: OperatorKind::TkMul } => {
                 tokens.remove(0);
                 let node_i = *Node::new(
                     NodeKind::NdMul,
@@ -260,7 +286,7 @@ fn mul(tokens: &mut Vec<Token>, lvars: &mut Vec<LVar>) -> Node {
                 );
                 node = node_i;
             }
-            Token::Operator { kind: TokenKind::TkDiv } => {
+            Token::Operator { kind: OperatorKind::TkDiv } => {
                 tokens.remove(0);
                 let node_i = *Node::new(
                     NodeKind::NdDiv,
@@ -277,11 +303,11 @@ fn mul(tokens: &mut Vec<Token>, lvars: &mut Vec<LVar>) -> Node {
 
 fn unary(tokens: &mut Vec<Token>, lvars: &mut Vec<LVar>) -> Option<Node> {
     match &tokens[0] {
-        Token::Operator { kind: TokenKind::TkAdd } => {
+        Token::Operator { kind: OperatorKind::TkAdd } => {
             tokens.remove(0);
             primary(tokens, lvars)
         }
-        Token::Operator { kind: TokenKind::TkSub } => {
+        Token::Operator { kind: OperatorKind::TkSub } => {
             tokens.remove(0);
             Some(*Node::new(NodeKind::NdSub, Node::new_node_num(0), Box::new(primary(tokens, lvars).unwrap())))
         }
@@ -292,10 +318,10 @@ fn unary(tokens: &mut Vec<Token>, lvars: &mut Vec<LVar>) -> Option<Node> {
 fn primary(tokens: &mut Vec<Token>, lvars: &mut Vec<LVar>) -> Option<Node> {
     let first_token = (&tokens).first().unwrap().clone();
     match first_token {
-        Token::Operator { kind: TokenKind::TkPrSt } => {
+        Token::Operator { kind: OperatorKind::TkPrSt } => {
             tokens.remove(0);
             let node = expr(tokens, lvars);
-            if let Token::Operator { kind: TokenKind::TkPrEd } = &tokens[0] {
+            if let Token::Operator { kind: OperatorKind::TkPrEd } = &tokens[0] {
                 tokens.remove(0);
             }
             Some(node)

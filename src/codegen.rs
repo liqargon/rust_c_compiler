@@ -5,6 +5,14 @@ pub fn gen(node: Node) {
         println!("  push {}", val);
         return;
     }
+    if let Node::Return(rhs) = node {
+        gen(*rhs);
+        println!("  pop rax");
+        println!("  mov rsp, rbp");
+        println!("  pop rbp");
+        println!("  ret");
+        return;
+    }
     if let Node::LVar { offset: _ } = node {
         gen_lval(node);
         println!("  pop rax");
