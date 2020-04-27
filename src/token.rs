@@ -17,6 +17,10 @@ pub enum OperatorKind {
 
 pub enum KeywordKind {
     TkReturn,
+    TkIf,
+    TkElse,
+    TkWhile,
+    TkFor,
 }
 
 pub enum Token {
@@ -30,6 +34,10 @@ pub enum Token {
         name: String
     },
     Return,
+    If,
+    Else,
+    While,
+    For,
 }
 
 
@@ -44,6 +52,9 @@ pub fn tokenize(input: String) -> Vec<Token> {
         if let Some(kw) = tokenize_keyword(&mut input) {
             match kw {
                 KeywordKind::TkReturn => tokens.push(Token::Return),
+                KeywordKind::TkIf => tokens.push(Token::If),
+                KeywordKind::TkElse => tokens.push(Token::Else),
+                _ => {}
             }
             continue;
         }
@@ -79,10 +90,17 @@ fn tokenize_whitespace(x: &mut String) {
 fn tokenize_keyword(x: &mut String) -> Option<KeywordKind> {
     if x.starts_with("return ") {
         x.drain(0..7);
-        Some(KeywordKind::TkReturn)
-    } else {
-        None
+        return Some(KeywordKind::TkReturn);
     }
+    if x.starts_with("if(") {
+        x.drain(0..2);
+        return Some(KeywordKind::TkIf);
+    }
+    if x.starts_with("else ") {
+        x.drain(0..4);
+        return Some(KeywordKind::TkElse);
+    }
+    None
 }
 
 fn tokenize_number(x: &mut String) -> Option<i32> {

@@ -15,7 +15,7 @@ fn main() {
     println!("  mov rbp, rsp");
     println!("  sub rsp, 208");
     let s = args[1].clone();
-   // let s = "a=3+1;b=4+a;return b+1;".to_string();
+   // let s = "if(1==0)return 5;else return 3;".to_string();
     let mut v = tokenize(s);
 
     let nodes = program(&mut v);

@@ -13,6 +13,24 @@ pub fn gen(node: Node) {
         println!("  ret");
         return;
     }
+    if let Node::If { cond, i_st, e_st } = node {
+        gen(*cond);
+        println!("  pop rax");
+        println!("  cmp rax, 0");
+        if let Node::Number { val } = *e_st {
+            println!("  je  .Lend001");
+            gen(*i_st);
+            println!(".Lend001:");
+            return;
+        }
+        println!("  je  .Lelse001");
+        gen(*i_st);
+        println!("  jmp .Lend001");
+        println!(".Lelse001:");
+        gen(*e_st);
+        println!(".Lend001:");
+        return;
+    }
     if let Node::LVar { offset: _ } = node {
         gen_lval(node);
         println!("  pop rax");

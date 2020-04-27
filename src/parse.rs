@@ -13,6 +13,21 @@ pub enum Node {
         offset: i32,
     },
     Return(Box<Node>),
+    If {
+        cond: Box<Node>,
+        i_st: Box<Node>,
+        e_st: Box<Node>,
+    },
+    While {
+        cond: Box<Node>,
+        st: Box<Node>,
+    },
+    For {
+        cond_1: Box<Node>,
+        cond_2: Box<Node>,
+        cond_3: Box<Node>,
+        st: Box<Node>,
+    },
 }
 
 pub enum NodeKind {
@@ -97,7 +112,11 @@ impl Node {
 }
 
 // program    = stmt*
-// stmt       = expr ";" | "return" expr ";"
+// stmt       = expr ";"
+//              | "return" expr ";"
+//              | "if" "(" expr ")" stmt ("else" stmt)?
+//              | "while" "(" expr ")" stmt
+//              | "for" "(" expr? ";" expr? ";" expr? ")" stmt
 // expr       = assign
 // assign     = equality ("=" assign)?
 // equality   = relational ("==" relational | "!=" relational)*
@@ -120,19 +139,48 @@ pub fn program(tokens: &mut Vec<Token>) -> Vec<Node> {
 }
 
 fn stmt(tokens: &mut Vec<Token>, lvars: &mut Vec<LVar>) -> Node {
-    if let Token::Return = &tokens[0] {
-        tokens.remove(0);
-        let node = *Node::new_keyword(Box::new(expr(tokens, lvars)));
-        if let Token::Operator { kind: OperatorKind::TkExprEnd } = &tokens[0] {
+    match &tokens[0] {
+        Token::Return => {
             tokens.remove(0);
+            let node = *Node::new_keyword(Box::new(expr(tokens, lvars)));
+            if let Token::Operator { kind: OperatorKind::TkExprEnd } = &tokens[0] {
+                tokens.remove(0);
+            }
+            node
         }
-        node
-    } else {
-        let node = expr(tokens, lvars);
-        if let Token::Operator { kind: OperatorKind::TkExprEnd } = &tokens[0] {
+        Token::If => {
             tokens.remove(0);
+            if let Token::Operator { kind: OperatorKind::TkPrSt } = &tokens[0] {
+                tokens.remove(0);
+            }
+            let node_cond = expr(tokens, lvars);
+            if let Token::Operator { kind: OperatorKind::TkPrEd } = &tokens[0] {
+                tokens.remove(0);
+            }
+            let i_st = stmt(tokens, lvars);
+            if let Token::Else = tokens[0] {
+                tokens.remove(0);
+                let e_st = stmt(tokens, lvars);
+                let node = Node::If { cond: Box::new(node_cond), i_st: Box::new(i_st), e_st: Box::new(e_st) };
+                node
+            } else {
+                let node = Node::If { cond: Box::new(node_cond), i_st: Box::new(i_st), e_st: Box::new(Node::Number { val: 0 }) };
+                node
+            }
         }
-        node
+        // Token::While => {
+        //
+        // }
+        // Token::For => {
+        //
+        // }
+        _ => {
+            let node = expr(tokens, lvars);
+            if let Token::Operator { kind: OperatorKind::TkExprEnd } = &tokens[0] {
+                tokens.remove(0);
+            }
+            node
+        }
     }
 }
 
