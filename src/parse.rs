@@ -28,6 +28,7 @@ pub enum Node {
         cond_3: Box<Node>,
         st: Box<Node>,
     },
+    Block(Vec<Node>),
 }
 
 pub enum NodeKind {
@@ -113,6 +114,7 @@ impl Node {
 
 // program    = stmt*
 // stmt       = expr ";"
+//              | "{" stmt* "}"
 //              | "return" expr ";"
 //              | "if" "(" expr ")" stmt ("else" stmt)?
 //              | "while" "(" expr ")" stmt
@@ -174,6 +176,19 @@ fn stmt(tokens: &mut Vec<Token>, lvars: &mut Vec<LVar>) -> Node {
         // Token::For => {
         //
         // }
+        Token::Operator { kind: OperatorKind::TkBrSt } => {
+            tokens.remove(0);
+            let mut stmts: Vec<Node> = Vec::new();
+            loop {
+                if let Token::Operator { kind: OperatorKind::TkBrEd } = &tokens[0] {
+                    tokens.remove(0);
+                    break;
+                } else {
+                    stmts.push(stmt(tokens, lvars));
+                }
+            }
+            Node::Block(stmts)
+        }
         _ => {
             let node = expr(tokens, lvars);
             if let Token::Operator { kind: OperatorKind::TkExprEnd } = &tokens[0] {

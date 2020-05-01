@@ -47,6 +47,13 @@ pub fn gen(node: Node) {
         println!("  push rdi");
         return;
     }
+    if let Node::Block(stmts) = node {
+        for stmt in stmts {
+            gen(stmt);
+            println!("  pop rax");
+        }
+        return;
+    }
     if let Node::Operator { kind, lhs, rhs } = node {
         gen(*lhs);
         gen(*rhs);

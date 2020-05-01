@@ -5,6 +5,8 @@ pub enum OperatorKind {
     TkDiv,
     TkPrSt,
     TkPrEd,
+    TkBrSt,
+    TkBrEd,
     TkEq,
     TkNEq,
     TkLt,
@@ -189,6 +191,14 @@ fn tokenize_operator(x: &mut String) -> Option<OperatorKind> {
                 ')' => {
                     x.remove(0);
                     Some(OperatorKind::TkPrEd)
+                }
+                '{' => {
+                    x.remove(0);
+                    Some(OperatorKind::TkBrSt)
+                }
+                '}' => {
+                    x.remove(0);
+                    Some(OperatorKind::TkBrEd)
                 }
                 '<' => {
                     x.remove(0);
